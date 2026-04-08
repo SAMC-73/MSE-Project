@@ -3,7 +3,7 @@ This is a repository for the project updates and final delivarable for Microcont
 
 Team members:
 
-1. Steven A. McClellan Castro 37622
+1. Steven A. McClellan Castro (37622)
 2.
 3.
 4.
