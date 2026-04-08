@@ -4,6 +4,6 @@ This is a repository for the project updates and final delivarable for Microcont
 Team members:
 
 1. Steven A. McClellan Castro 37622
-2.
+2. Leonardo Ivan Garcia Espinosa 37572
 3.
 4.
