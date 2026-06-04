@@ -6,4 +6,4 @@ Team members:
 1. Steven A. McClellan Castro 37622
 2. Leonardo Ivan Garcia Espinosa 37572
 3. Melanie Picen Hernandez 35032
-4.
+4. Vania Yareni Leal Espinoza 40077
