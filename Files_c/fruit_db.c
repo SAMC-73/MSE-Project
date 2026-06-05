@@ -1,171 +1,195 @@
 /**
  * @file    fruit_db.c
- * @brief   Módulo para Datos y Clasificación de Frutas.
+ * @brief   Module for fruit data storage and classification.
  */
 
 #include "fruit_db.h"
 
-/* --- Base de valores cromáticos estática --- */
-static fruta_registro_t base_datos_frutas[DB_MAX_FRUITS]; // Arreglo de registros de frutas
-static uint8_t total_frutas = 0; // Variable de conteo actual de frutas
+/* --- Static chromatic reference database --- */
+static fruit_record_t fruit_database[DB_MAX_FRUITS]; /**< Array of fruit records. */
+static uint8_t fruit_count = 0;                      /**< Current number of valid fruits. */
 
-/* --- Funciones auxiliares locales --- */
+/* --- Local helper functions --- */
 
+/**
+ * @brief  Copies a string into a bounded destination buffer.
+ * @param  dest Destination buffer.
+ * @param  src  Source string.
+ * @return Number of copied characters, excluding the null terminator.
+ */
 static uint8_t db_strcpy(char *dest, const char *src)
 {
     uint8_t i = 0;
-    while (src[i] != '\0' && i < (DB_MAX_NAME_LEN - 1)) {
+
+    while ((src[i] != '\0') && (i < (DB_MAX_NAME_LEN - 1U))) {
         dest[i] = src[i];
         i++;
     }
+
     dest[i] = '\0';
+
     return i;
 }
 
+/**
+ * @brief  Approximates the square root of a floating-point value.
+ * @param  x Input value.
+ * @return Approximate square root of x.
+ */
 static float fast_sqrtf(float x)
 {
-    if (x <= 0.0f) return 0.0f;
-    float y = x;
-    for (int i = 0; i < 5; i++) {
-        y = (y + x / y) * 0.5f;
+    if (x <= 0.0f) {
+        return 0.0f;
     }
+
+    float y = x;
+
+    for (int i = 0; i < 5; i++) {
+        y = (y + (x / y)) * 0.5f;
+    }
+
     return y;
 }
 
 fruit_db_status_t fruit_db_init(void)
 {
-    // Limpieza de la base de datos marcando
-    // todos los espacios como vacíos
+    // Clear the database by marking all slots as empty.
     for (uint8_t i = 0; i < DB_MAX_FRUITS; i++) {
-        base_datos_frutas[i].es_valida = 0;
+        fruit_database[i].is_valid = 0U;
     }
 
-    // Inclusión de frutas base.
-    // Calibración previa realizada con el propio sensor
-    db_strcpy(base_datos_frutas[0].nombre, "Manzana");
-    base_datos_frutas[0].r_ref = 0.615f;
-    base_datos_frutas[0].g_ref = 0.205f;
-    base_datos_frutas[0].b_ref = 0.178f;
-    base_datos_frutas[0].es_valida = 1;
-    total_frutas++;
-    
-    db_strcpy(base_datos_frutas[1].nombre, "Naranja");
-    base_datos_frutas[1].r_ref = 0.595f;
-    base_datos_frutas[1].g_ref = 0.281f;
-    base_datos_frutas[1].b_ref = 0.124f;
-    base_datos_frutas[1].es_valida = 1;
-    total_frutas++;
+    fruit_count = 0U;
 
-    db_strcpy(base_datos_frutas[2].nombre, "Plátano");
-    base_datos_frutas[2].r_ref = 0.508f;
-    base_datos_frutas[2].g_ref = 0.345f;
-    base_datos_frutas[2].b_ref = 0.147f;
-    base_datos_frutas[2].es_valida = 1;
-    total_frutas++;
+    // Load default fruit reference values.
+    // Previous calibration was performed using the same color sensor.
+    db_strcpy(fruit_database[0].name, "Apple");
+    fruit_database[0].r_ref = 0.615f;
+    fruit_database[0].g_ref = 0.205f;
+    fruit_database[0].b_ref = 0.178f;
+    fruit_database[0].is_valid = 1U;
+    fruit_count++;
 
-    db_strcpy(base_datos_frutas[3].nombre, "Tomate");
-    base_datos_frutas[3].r_ref = 0.6f;
-    base_datos_frutas[3].g_ref = 0.24f;
-    base_datos_frutas[3].b_ref = 0.159f;
-    base_datos_frutas[3].es_valida = 1;
-    total_frutas++;
+    db_strcpy(fruit_database[1].name, "Orange");
+    fruit_database[1].r_ref = 0.595f;
+    fruit_database[1].g_ref = 0.281f;
+    fruit_database[1].b_ref = 0.124f;
+    fruit_database[1].is_valid = 1U;
+    fruit_count++;
 
-    db_strcpy(base_datos_frutas[4].nombre, "Uva");
-    base_datos_frutas[4].r_ref = 0.422f;
-    base_datos_frutas[4].g_ref = 0.324f;
-    base_datos_frutas[4].b_ref = 0.254f;
-    base_datos_frutas[4].es_valida = 1;
-    total_frutas++;
+    db_strcpy(fruit_database[2].name, "Banana");
+    fruit_database[2].r_ref = 0.508f;
+    fruit_database[2].g_ref = 0.345f;
+    fruit_database[2].b_ref = 0.147f;
+    fruit_database[2].is_valid = 1U;
+    fruit_count++;
+
+    db_strcpy(fruit_database[3].name, "Tomato");
+    fruit_database[3].r_ref = 0.600f;
+    fruit_database[3].g_ref = 0.240f;
+    fruit_database[3].b_ref = 0.159f;
+    fruit_database[3].is_valid = 1U;
+    fruit_count++;
+
+    db_strcpy(fruit_database[4].name, "Grape");
+    fruit_database[4].r_ref = 0.422f;
+    fruit_database[4].g_ref = 0.324f;
+    fruit_database[4].b_ref = 0.254f;
+    fruit_database[4].is_valid = 1U;
+    fruit_count++;
 
     return FRUIT_DB_OK;
 }
 
-fruit_db_status_t fruit_db_add(const char *nombre, float r_raw, float g_raw, float b_raw)
+fruit_db_status_t fruit_db_add(const char *name, float r_raw, float g_raw, float b_raw)
 {
-    // Buscar la primera ranura vacía
+    // Search for the first empty slot.
     for (uint8_t i = 0; i < DB_MAX_FRUITS; i++) {
-        if (base_datos_frutas[i].es_valida == 0) {
-            
-            // Calculamos proporciones relativas para aislar la crominancia
-            float suma = r_raw + g_raw + b_raw;
-            if (suma == 0.0f) suma = 1.0f; // Evitar división por cero
-            
-            db_strcpy(base_datos_frutas[i].nombre, nombre);
-            base_datos_frutas[i].r_ref = r_raw / suma;
-            base_datos_frutas[i].g_ref = g_raw / suma;
-            base_datos_frutas[i].b_ref = b_raw / suma;
-            base_datos_frutas[i].es_valida = 1;
-            total_frutas++;
-            return FRUIT_DB_OK; // Éxito
+        if (fruit_database[i].is_valid == 0U) {
+
+            // Calculate relative proportions to isolate chrominance.
+            float sum = r_raw + g_raw + b_raw;
+
+            if (sum == 0.0f) {
+                sum = 1.0f; // Avoid division by zero.
+            }
+
+            db_strcpy(fruit_database[i].name, name);
+            fruit_database[i].r_ref = r_raw / sum;
+            fruit_database[i].g_ref = g_raw / sum;
+            fruit_database[i].b_ref = b_raw / sum;
+            fruit_database[i].is_valid = 1U;
+            fruit_count++;
+
+            return FRUIT_DB_OK;
         }
     }
-    return FRUIT_DB_ERR_FULL; // Error: Base de datos llena
+
+    return FRUIT_DB_ERR_FULL;
 }
 
 fruit_db_status_t fruit_db_delete(uint8_t index)
 {
-    if (index >= total_frutas) {
-        return FRUIT_DB_ERR_INVALID_INDEX; // Protección contra índices fuera de rango
+    if (index >= fruit_count) {
+        return FRUIT_DB_ERR_INVALID_INDEX;
     }
 
-    // Desplazar todos los elementos un espacio hacia atrás
-    
-    for (uint8_t i = index; i < total_frutas - 1; i++) {
-        // C permite copiar structs directamente
-        base_datos_frutas[i] = base_datos_frutas[i + 1]; 
+    // Shift all elements one position backward.
+    for (uint8_t i = index; i < (fruit_count - 1U); i++) {
+        // C allows direct struct assignment.
+        fruit_database[i] = fruit_database[i + 1U];
     }
 
-    // Limpiar la última ranura que quedó duplicada tras el desplazamiento
-    base_datos_frutas[total_frutas - 1].es_valida = 0;
-    
-    // Decrementar el conteo total de frutas válidas
-    total_frutas--;
+    // Clear the last slot, which was duplicated after shifting.
+    fruit_database[fruit_count - 1U].is_valid = 0U;
 
-    return FRUIT_DB_OK; // Éxito
+    // Decrease the total number of valid fruit records.
+    fruit_count--;
+
+    return FRUIT_DB_OK;
 }
 
 fruit_db_status_t fruit_db_compare(float r_raw, float g_raw, float b_raw, uint8_t target_idx)
 {
-
-    // Validación de índice y disponibilidad de la fruta
-    if (target_idx >= DB_MAX_FRUITS || base_datos_frutas[target_idx].es_valida == 0) {
-        return FRUIT_DB_ERR_INVALID_INDEX; 
+    // Validate the index and fruit availability.
+    if ((target_idx >= DB_MAX_FRUITS) || (fruit_database[target_idx].is_valid == 0U)) {
+        return FRUIT_DB_ERR_INVALID_INDEX;
     }
 
-    // 1. Obtención de datos de la fruta de referencia
-    fruta_registro_t fruta = base_datos_frutas[target_idx];
+    // 1. Get the reference fruit data.
+    fruit_record_t fruit = fruit_database[target_idx];
 
-    // 2. Normalizar la lectura actual a proporciones cromáticas
+    // 2. Normalize the current reading into chromatic proportions.
+    float sum = r_raw + g_raw + b_raw;
 
-    float suma = r_raw + g_raw + b_raw;  //Suma total para normalizar y aislar la crominancia
-    if(suma == 0.0f) {suma = 1.0f;} // Evitar división por cero en caso de oscuridad total
-    
-    float r_med = r_raw / suma;     // Proporción de rojo
-    float g_med = g_raw / suma;     // Proporción de verde
-    float b_med = b_raw / suma;     // Proporción de azul
+    if (sum == 0.0f) {
+        sum = 1.0f; // Avoid division by zero in complete darkness.
+    }
 
-    // 3. Calcular la distancia euclidiana entre la lectura y la referencia
-    float dr = r_med - fruta.r_ref; // Diferencia en rojo
-    float dg = g_med - fruta.g_ref; // Diferencia en verde
-    float db = b_med - fruta.b_ref; // Diferencia en azul
-    
-    float distancia = fast_sqrtf(dr * dr + dg * dg + db * db);
-    
-    // 3. Comparar con el umbral de tolerancia
-    if (distancia <= DB_MATCH_TOLERANCE) {
-        return FRUIT_DB_OK; // Coincidencia aceptable
+    float r_measured = r_raw / sum;
+    float g_measured = g_raw / sum;
+    float b_measured = b_raw / sum;
+
+    // 3. Calculate Euclidean distance between the reading and the reference.
+    float dr = r_measured - fruit.r_ref;
+    float dg = g_measured - fruit.g_ref;
+    float db = b_measured - fruit.b_ref;
+
+    float distance = fast_sqrtf((dr * dr) + (dg * dg) + (db * db));
+
+    // 4. Compare against the tolerance threshold.
+    if (distance <= DB_MATCH_TOLERANCE) {
+        return FRUIT_DB_OK;
     }
 
     return FRUIT_DB_ERR_NO_MATCH;
 }
 
-
-const fruta_registro_t* fruit_db_get_table(void)
+const fruit_record_t* fruit_db_get_table(void)
 {
-    return base_datos_frutas;
+    return fruit_database;
 }
 
 uint8_t fruit_db_get_count(void)
 {
-    return total_frutas;
+    return fruit_count;
 }
